@@ -1,5 +1,6 @@
 var request = require("request"),
-    xmldom = require("xmldom");
+    xmldom = require("xmldom"),
+	fs = require("fs");
 
 var parser = new xmldom.DOMParser(),
     serialiser = new xmldom.XMLSerializer();
@@ -43,10 +44,6 @@ var WSDL = module.exports = function WSDL(options) {
     this.portHandlers = this.portHandlers.concat(options.portHandlers);
   }
 
-  if (options.request) {
-    this._request = options.request;
-  }
-
   this.messages = [];
   this.portTypes = [];
   this.bindings = [];
@@ -56,8 +53,6 @@ var WSDL = module.exports = function WSDL(options) {
     targetNamespace: [],
   };
 };
-
-WSDL.prototype._request = request;
 
 WSDL.prototype.addMessageHandler = function addMessageHandler(messageHandler) {
   this.messageHandlers.push(messageHandler);
@@ -320,13 +315,8 @@ WSDL.prototype.portFromXML = function portFromXML(element) {
   return port;
 };
 
-WSDL.prototype.load = function load(url, done) {
-  var self = this;
-
-  this._request.call(null, url, function(err, res, data) {
-    if (err) {
-      return done(err);
-    }
+WSDL.prototype._load_data = function (data, done) {
+	var self = this;
 
     try {
       var doc = parser.parseFromString(data);
@@ -373,8 +363,34 @@ WSDL.prototype.load = function load(url, done) {
     self.state.targetNamespace.pop();
 
     return done();
-  });
 };
+
+WSDL.prototype.load = function load(url, done) {
+  var self = this;
+
+  // check local file first
+  fs.exists(url, function (yes) {
+	if (yes) {
+      fs.readFile(url, function (err, data) {
+		if (err) return done(err);
+
+		self._load_data(data, function (lerr) {
+		  return done(lerr);
+		});
+	  });
+
+	} else {
+	  // not a file
+	  request(url, function (err, res, data) {
+		if (err) return done(err);
+
+		self._load_data(data, function (lerr) {
+		  return done(lerr);
+		});
+	  });
+	}
+  });
+}
 
 WSDL.prototype.getMessage = function getMessage(name) {
   if (name.length === 1) {
@@ -416,6 +432,8 @@ WSDL.prototype.getService = function getService(name) {
   }).shift();
 };
 
+
+ 
 WSDL.load = function load(options, url, done) {
   if (typeof url === "function") {
     done = url;
