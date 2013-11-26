@@ -374,7 +374,7 @@ WSDL.prototype.load = function load(url, done) {
       fs.readFile(url, function (err, data) {
 		if (err) return done(err);
 
-		self._load_data(data, function (lerr) {
+		self._load_data(data + '', function (lerr) {
 		  return done(lerr);
 		});
 	  });
