@@ -6,29 +6,42 @@ Basic usage:
 ```	
 	var WSDL = require('wsdl');
 	var wsdl = new WSDL({
-		messageHandlers: [],
-		partHandlers: [],
-		portTypeHandlers: [],
-		bindingHandlers: [],
-		operationHandlers: [],
-		serviceHandlers: [],
-		portHandlers: []
+		bindingHandlers: [
+			function (binding, element) {
+			},
+			function (...
+		],
+		portHandlers: [
+			function (port, element) { .. },
+			...
+		],
+		operationHandlers: [
+			function (operation, element) { .. },
+			...
+		],
+		messageHandlers: [ ... ],
+		portTypeHandlers: [ ... ],
+		serviceHandlers: [ ... ],
+		partHandlers: [ ... ]
 	});
 	wsdl.load(url-or-file);
 
-	wsdl.addMessageHandler();
-	wsdl.addPartHandler();
-	wsdl.addPortTypeHandler();
-	wsdl.addBindingHandler();
-	wsdl.addOperationHandler();
-	wsdl.addServiceHandler();
-	wsdl.addPortHandler();
-
+	wsdl.addBindingHandler(function (binding, element) {
+		...
+	});
+	wsdl.addPortHandler(function (port, element) {
+		...
+	});
+	wsdl.addOperationHandler(...);
+	wsdl.addMessageHandler(...);
+	wsdl.addPortTypeHandler(...);
+	wsdl.addServiceHandler(...);
+	wsdl.addPartHandler(...);
   
-	wsdl.getMessage();
-	wsdl.getPortType();
-	wsdl.getBinding();
-	wsdl.getService();
+	var msg = wsdl.getMessage(name);
+	var port = wsdl.getPortType(name);
+	var binding = wsdl.getBinding(name);
+	var service = wsdl.getService(name);
 ```
 
 Alternative constructor:

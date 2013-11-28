@@ -431,8 +431,6 @@ WSDL.prototype.getService = function getService(name) {
     return e.name[0] === name[0] && e.name[1] === name[1];
   }).shift();
 };
-
-
  
 WSDL.load = function load(options, url, done) {
   if (typeof url === "function") {
