@@ -2,8 +2,7 @@ var request = require("request"),
     xmldom = require("xmldom"),
 	fs = require("fs");
 
-var parser = new xmldom.DOMParser(),
-    serialiser = new xmldom.XMLSerializer();
+var parser = new xmldom.DOMParser();
 
 var WSDL = module.exports = function WSDL(options) {
     options = options || {};
@@ -95,79 +94,121 @@ WSDL.prototype.addPortHandler = function addPortHandler(portHandler) {
     this.portHandlers.push(portHandler);
 };
 
-WSDL.prototype.messageFromXML = function messageFromXML(element) {
+WSDL.prototype._load_data = function (data, done) {
+	var self = this;
+
+    try {
+        var doc = parser.parseFromString(data);
+    } catch (e) {
+        return done(e);
+    }
+
+    var definition = doc.getElementsByTagNameNS(
+        "http://schemas.xmlsoap.org/wsdl/",
+        "definitions"
+    );
+
+    if (!definition || definition.length !== 1) {
+        return done(Error("couldn't find root definitions object"));
+    }
+
+    definition = definition[0];
+
+    var targetNamespace = definition.getAttribute("targetNamespace");
+
+    self.state.targetNamespace.push(targetNamespace);
+
+    var i;
+
+    var messages = definition.getElementsByTagNameNS(
+        "http://schemas.xmlsoap.org/wsdl/",
+        "message"
+    );
+
+    for (i = 0; i < messages.length; ++i) {
+        self.messages.push(self.messageFromXML(messages[i]));
+    }
+
+    var portTypes = definition.getElementsByTagNameNS(
+        "http://schemas.xmlsoap.org/wsdl/",
+        "portType"
+    );
+
+    for (i = 0; i < portTypes.length; ++i) {
+        self.portTypes.push(self.portTypeFromXML(portTypes[i]));
+    }
+
+    var bindings = definition.getElementsByTagNameNS(
+        "http://schemas.xmlsoap.org/wsdl/",
+        "binding"
+    );
+
+    for (i = 0; i < bindings.length; ++i) {
+        self.bindings.push(self.bindingFromXML(bindings[i]));
+    }
+
+    var services = definition.getElementsByTagNameNS(
+        "http://schemas.xmlsoap.org/wsdl/",
+        "service"
+    );
+
+    for (i = 0; i < services.length; ++i) {
+        self.services.push(self.serviceFromXML(services[i]));
+    }
+
+    self.state.targetNamespace.pop();
+
+    return done();
+};
+
+WSDL.prototype.serviceFromXML = function serviceFromXML(element) {
     var name = element.getAttribute("name");
  
-    var message = {
+    var service = {
         name: [this.state.targetNamespace[0], name],
-        parts: [],
+        ports: [],
     };
  
     var i;
  
-    for (i = 0; i < this.messageHandlers.length; ++i) {
-        this.messageHandlers[i].call(null, message, element);
+    for (i = 0; i < this.serviceHandlers.length; ++i) {
+        this.serviceHandlers[i].call(null, portType, element);
     }
  
-    var parts = element.getElementsByTagNameNS(
+    var ports = element.getElementsByTagNameNS(
         "http://schemas.xmlsoap.org/wsdl/",
-        "part"
+        "port"
     );
  
-    for (i = 0; i < parts.length; ++i) {
-        message.parts.push(this.partFromXML(parts[i]));
+    for (i = 0; i < ports.length; ++i) {
+        service.ports.push(this.portFromXML(ports[i]));
     }
  
-    return message;
+    return service;
 };
 
-WSDL.prototype.partFromXML = function partFromXML(element) {
+WSDL.prototype.portFromXML = function portFromXML(element) {
     var name = element.getAttribute("name"),
-        elementName = element.getAttribute("element");
+        binding = element.getAttribute("binding");
  
-    elementName = elementName.split(":");
+    binding = binding.split(":");
  
-    if (elementName.length > 1) {
-        elementName[0] = element.lookupNamespaceURI(elementName[0]);
+    if (binding.length > 1) {
+        binding[0] = element.lookupNamespaceURI(binding[0]);
     } else {
-        elementName.unshift(null);
+        binding.unshift(null);
     }
  
-    var part = {
+    var port = {
         name: name,
-        element: elementName,
+        binding: binding,
     };
  
-    for (var i = 0; i < this.partHandlers.length; ++i) {
-        this.partHandlers[i].call(null, part, element);
+    for (var i = 0; i < this.portHandlers.length; ++i) {
+        this.portHandlers[i].call(null, port, element);
     }
  
-    return part;
-};
-
-WSDL.prototype.portTypeFromXML = function portTypeFromXML(element) {
-    var name = element.getAttribute("name");
- 
-    var portType = {
-        name: [this.state.targetNamespace[0], name],
-        operations: [],
-    };
- 
-    var i;
-    for (i = 0; i < this.portTypeHandlers.length; ++i) {
-        this.portTypeHandlers[i].call(null, portType, element);
-    }
- 
-    var operations = element.getElementsByTagNameNS(
-        "http://schemas.xmlsoap.org/wsdl/",
-        "operation"
-    );
- 
-    for (i = 0; i < operations.length; ++i) {
-        portType.operations.push(this.operationFromXML(operations[i]));
-    }
- 
-    return portType;
+    return port;
 };
 
 WSDL.prototype.bindingFromXML = function bindingFromXML(element) {
@@ -301,121 +342,79 @@ WSDL.prototype.operationFromXML = function operationFromXML(element) {
     return operation;
 };
 
-WSDL.prototype.serviceFromXML = function serviceFromXML(element) {
+WSDL.prototype.portTypeFromXML = function portTypeFromXML(element) {
     var name = element.getAttribute("name");
  
-    var service = {
+    var portType = {
         name: [this.state.targetNamespace[0], name],
-        ports: [],
+        operations: [],
+    };
+ 
+    var i;
+    for (i = 0; i < this.portTypeHandlers.length; ++i) {
+        this.portTypeHandlers[i].call(null, portType, element);
+    }
+ 
+    var operations = element.getElementsByTagNameNS(
+        "http://schemas.xmlsoap.org/wsdl/",
+        "operation"
+    );
+ 
+    for (i = 0; i < operations.length; ++i) {
+        portType.operations.push(this.operationFromXML(operations[i]));
+    }
+ 
+    return portType;
+};
+
+WSDL.prototype.messageFromXML = function messageFromXML(element) {
+    var name = element.getAttribute("name");
+ 
+    var message = {
+        name: [this.state.targetNamespace[0], name],
+        parts: [],
     };
  
     var i;
  
-    for (i = 0; i < this.serviceHandlers.length; ++i) {
-        this.serviceHandlers[i].call(null, portType, element);
+    for (i = 0; i < this.messageHandlers.length; ++i) {
+        this.messageHandlers[i].call(null, message, element);
     }
  
-    var ports = element.getElementsByTagNameNS(
+    var parts = element.getElementsByTagNameNS(
         "http://schemas.xmlsoap.org/wsdl/",
-        "port"
+        "part"
     );
  
-    for (i = 0; i < ports.length; ++i) {
-        service.ports.push(this.portFromXML(ports[i]));
+    for (i = 0; i < parts.length; ++i) {
+        message.parts.push(this.partFromXML(parts[i]));
     }
  
-    return service;
+    return message;
 };
 
-WSDL.prototype.portFromXML = function portFromXML(element) {
+WSDL.prototype.partFromXML = function partFromXML(element) {
     var name = element.getAttribute("name"),
-        binding = element.getAttribute("binding");
+        elementName = element.getAttribute("element");
  
-    binding = binding.split(":");
+    elementName = elementName.split(":");
  
-    if (binding.length > 1) {
-        binding[0] = element.lookupNamespaceURI(binding[0]);
+    if (elementName.length > 1) {
+        elementName[0] = element.lookupNamespaceURI(elementName[0]);
     } else {
-        binding.unshift(null);
+        elementName.unshift(null);
     }
  
-    var port = {
+    var part = {
         name: name,
-        binding: binding,
+        element: elementName,
     };
  
-    for (var i = 0; i < this.portHandlers.length; ++i) {
-        this.portHandlers[i].call(null, port, element);
+    for (var i = 0; i < this.partHandlers.length; ++i) {
+        this.partHandlers[i].call(null, part, element);
     }
  
-    return port;
-};
-
-WSDL.prototype._load_data = function (data, done) {
-	var self = this;
-
-    try {
-        var doc = parser.parseFromString(data);
-    } catch (e) {
-        return done(e);
-    }
-
-    var definition = doc.getElementsByTagNameNS(
-        "http://schemas.xmlsoap.org/wsdl/",
-        "definitions"
-    );
-
-    if (!definition || definition.length !== 1) {
-        return done(Error("couldn't find root definitions object"));
-    }
-
-    definition = definition[0];
-
-    var targetNamespace = definition.getAttribute("targetNamespace");
-
-    self.state.targetNamespace.push(targetNamespace);
-
-    var i;
-
-    var messages = definition.getElementsByTagNameNS(
-        "http://schemas.xmlsoap.org/wsdl/",
-        "message"
-    );
-
-    for (i = 0; i < messages.length; ++i) {
-        self.messages.push(self.messageFromXML(messages[i]));
-    }
-
-    var portTypes = definition.getElementsByTagNameNS(
-        "http://schemas.xmlsoap.org/wsdl/",
-        "portType"
-    );
-
-    for (i = 0; i < portTypes.length; ++i) {
-        self.portTypes.push(self.portTypeFromXML(portTypes[i]));
-    }
-
-    var bindings = definition.getElementsByTagNameNS(
-        "http://schemas.xmlsoap.org/wsdl/",
-        "binding"
-    );
-
-    for (i = 0; i < bindings.length; ++i) {
-        self.bindings.push(self.bindingFromXML(bindings[i]));
-    }
-
-    var services = definition.getElementsByTagNameNS(
-        "http://schemas.xmlsoap.org/wsdl/",
-        "service"
-    );
-
-    for (i = 0; i < services.length; ++i) {
-        self.services.push(self.serviceFromXML(services[i]));
-    }
-
-    self.state.targetNamespace.pop();
-
-    return done();
+    return part;
 };
 
 WSDL.prototype.load = function load(url, done) {
