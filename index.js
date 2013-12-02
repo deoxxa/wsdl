@@ -60,6 +60,10 @@ var WSDL = module.exports = function WSDL(options) {
     };
 };
 
+/*
+ * Public functions
+ */
+
 WSDL.prototype.addMessageHandler = function addMessageHandler(messageHandler) {
     this.messageHandlers.push(messageHandler);
 };
@@ -93,6 +97,100 @@ WSDL.prototype.addServiceHandler = function addServiceHandler(
 WSDL.prototype.addPortHandler = function addPortHandler(portHandler) {
     this.portHandlers.push(portHandler);
 };
+
+WSDL.prototype.getMessage = function getMessage(name) {
+    if (name.length === 1) {
+        name.unshift("");
+    }
+ 
+    return this.message.filter(function(e) {
+        return e.name[0] === name[0] && e.name[1] === name[1];
+    }).shift();
+};
+
+WSDL.prototype.getPortType = function getPortType(name) {
+    if (name.length === 1) {
+        name.unshift("");
+    }
+ 
+    return this.portTypes.filter(function(e) {
+        return e.name[0] === name[0] && e.name[1] === name[1];
+    }).shift();
+};
+
+WSDL.prototype.getBinding = function getBinding(name) {
+    if (name.length === 1) {
+        name.unshift("");
+    }
+ 
+    return this.bindings.filter(function(e) {
+        return e.name[0] === name[0] && e.name[1] === name[1];
+    }).shift();
+};
+
+WSDL.prototype.getService = function getService(name) {
+    if (name.length === 1) {
+        name.unshift("");
+    }
+ 
+    return this.services.filter(function(e) {
+        return e.name[0] === name[0] && e.name[1] === name[1];
+    }).shift();
+};
+
+WSDL.load = function load(options, url, done) {
+    if (typeof url === "function") {
+        done = url;
+        url = null;
+    }
+ 
+    if (typeof options === "string") {
+        url = options;
+        options = null;
+    }
+ 
+    var wsdl = new WSDL(options);
+ 
+    return wsdl.load(url, function(err) {
+        if (err) {
+            return done(err);
+        }
+       
+        return done(null, wsdl);
+    });
+};
+
+WSDL.prototype.load = function load(url, done) {
+    var self = this;
+ 
+    // check local file first
+    fs.exists(url, function (yes) {
+        if (yes) {
+            fs.readFile(url, function (err, data) {
+                if (err)
+                    return done(err);
+               
+                self._load_data(data + '', function (lerr) {
+                    return done(lerr);
+                });
+            });
+        } else {
+            // not a file
+            request(url, function (err, res, data) {
+                if (err)
+                    return done(err);
+               
+                self._load_data(data, function (lerr) {
+                    return done(lerr);
+                });
+            });
+        }
+    });
+}
+
+/*
+ * Internal functions
+ */
 
 WSDL.prototype._load_data = function (data, done) {
 	var self = this;
@@ -415,94 +513,4 @@ WSDL.prototype.partFromXML = function partFromXML(element) {
     }
  
     return part;
-};
-
-WSDL.prototype.load = function load(url, done) {
-    var self = this;
- 
-    // check local file first
-    fs.exists(url, function (yes) {
-        if (yes) {
-            fs.readFile(url, function (err, data) {
-                if (err)
-                    return done(err);
-               
-                self._load_data(data + '', function (lerr) {
-                    return done(lerr);
-                });
-            });
-        } else {
-            // not a file
-            request(url, function (err, res, data) {
-                if (err)
-                    return done(err);
-               
-                self._load_data(data, function (lerr) {
-                    return done(lerr);
-                });
-            });
-        }
-    });
-}
-
-WSDL.prototype.getMessage = function getMessage(name) {
-    if (name.length === 1) {
-        name.unshift("");
-    }
- 
-    return this.message.filter(function(e) {
-        return e.name[0] === name[0] && e.name[1] === name[1];
-    }).shift();
-};
-
-WSDL.prototype.getPortType = function getPortType(name) {
-    if (name.length === 1) {
-        name.unshift("");
-    }
- 
-    return this.portTypes.filter(function(e) {
-        return e.name[0] === name[0] && e.name[1] === name[1];
-    }).shift();
-};
-
-WSDL.prototype.getBinding = function getBinding(name) {
-    if (name.length === 1) {
-        name.unshift("");
-    }
- 
-    return this.bindings.filter(function(e) {
-        return e.name[0] === name[0] && e.name[1] === name[1];
-    }).shift();
-};
-
-WSDL.prototype.getService = function getService(name) {
-    if (name.length === 1) {
-        name.unshift("");
-    }
- 
-    return this.services.filter(function(e) {
-        return e.name[0] === name[0] && e.name[1] === name[1];
-    }).shift();
-};
- 
-WSDL.load = function load(options, url, done) {
-    if (typeof url === "function") {
-        done = url;
-        url = null;
-    }
- 
-    if (typeof options === "string") {
-        url = options;
-        options = null;
-    }
- 
-    var wsdl = new WSDL(options);
- 
-    return wsdl.load(url, function(err) {
-        if (err) {
-            return done(err);
-        }
-       
-        return done(null, wsdl);
-    });
 };
