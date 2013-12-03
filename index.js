@@ -1,6 +1,7 @@
-var request = require("request"),
-    xmldom = require("xmldom"),
-	fs = require("fs");
+var request = require("request");
+var xmldom = require("xmldom");
+var fs = require("fs");
+var util = require("util");
 
 var parser = new xmldom.DOMParser();
 
@@ -264,7 +265,7 @@ WSDL.prototype.serviceFromXML = function serviceFromXML(element) {
  
     var service = {
         name: [this.state.targetNamespace[0], name],
-        ports: [],
+        ports: []
     };
  
     var i;

@@ -150,16 +150,17 @@ WSDL.load(options, process.argv[2], function(err, wsdl) {
             }
            
             var binding = wsdl.bindings.filter(function(binding) {
-                return
-                    binding.name[0] === port.binding[0] &&
-                    binding.name[1] === port.binding[1];
-            }).shift();
+                return ((
+                    binding.name[0] == port.binding[0]
+                ) && (
+                    binding.name[1] == port.binding[1]
+                )) ? true : false;
+            }).shift(); // first binding in the array
            
             if (!binding) {
                 return;
             }
-            //console.log(util.inspect(binding.soap.binding.style));
-           
+
             binding.operations.forEach(function(operation) {
                 if (
                     !operation ||
