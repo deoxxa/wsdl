@@ -164,32 +164,53 @@ WSDL.load(options, process.argv[2], function(err, wsdl) {
             binding.operations.forEach(function(operation) {
                 if (
                     !operation ||
-                    !operation.input ||
-                    !operation.input.soap ||
-                    !operation.input.soap.namespace
-                ) {
-                  return;
-                }
-               
-                if (
-                    !operation ||
                     !operation.soapOperation ||
                     !operation.soapOperation.soapAction
                 ) {
                   return;
                 }
+
+                var request = [];
+                var response = [];
+                if (binding.soap.binding.style == 'rpc') {
+
+                    if (
+                        !operation ||
+                        !operation.input ||
+                        !operation.input.soap ||
+                        !operation.input.soap.namespace
+                    ) {
+                        return;
+                    }
+                    request.push( 
+                        operation.input.soap.namespace,
+                        operation.input.name
+                    );
+                    response.push(
+                        operation.output.soap.namespace,
+                        operation.output.name
+                    );
+
+                } else {
+
+                    //  If the style attribute is omitted, it is assumed to be 
+                    // "document". -- WSDL spec 3.3
+                    if (
+                        !operation ||
+                        !operation.input ||
+                        !operation.input.soap ||
+                        !operation.input.soap.use == 'literal'
+                    ) {
+                        // TODO: use = 'encoding' is not supported
+                        return;
+                    }
+                }
                
                 result[operation.name] = {
                     uri: port.soap.address.location,
                     action: operation.soapOperation.soapAction,
-                    request: [
-                        operation.input.soap.namespace,
-                        operation.input.name
-                    ],
-                    response: [
-                        operation.output.soap.namespace,
-                        operation.output.name
-                    ]
+                    request: request,
+                    response: response
                 };
             });
         });
