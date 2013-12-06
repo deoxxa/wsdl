@@ -138,6 +138,10 @@ WSDL.load(options, process.argv[2], function(err, wsdl) {
  
     var result = {};
  
+    wsdl.types.forEach(function (type) {
+        //console.log(type);
+    });
+
     wsdl.services.forEach(function(service) {
         service.ports.forEach(function(port) {
             if (
@@ -216,5 +220,5 @@ WSDL.load(options, process.argv[2], function(err, wsdl) {
         });
     });
  
-    console.log(JSON.stringify(result, null, 2));
+    //console.log(JSON.stringify(result, null, 2));
 });

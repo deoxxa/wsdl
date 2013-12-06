@@ -15,6 +15,7 @@ var WSDL = module.exports = function WSDL(options) {
     this.operationHandlers = [];
     this.serviceHandlers = [];
     this.portHandlers = [];
+    this.typeHandlers = [];
  
     if (options.messageHandlers) {
         this.messageHandlers =
@@ -50,11 +51,17 @@ var WSDL = module.exports = function WSDL(options) {
         this.portHandlers =
             this.portHandlers.concat(options.portHandlers);
     }
+    
+    if (options.typeHandlers) {
+        this.typeHandlers = 
+            this.typeHandlers.concat(options.typeHandlers);
+    }
  
     this.messages = [];
     this.portTypes = [];
     this.bindings = [];
     this.services = [];
+    this.types = [];
  
     this.state = {
         targetNamespace: [],
@@ -99,6 +106,10 @@ WSDL.prototype.addPortHandler = function addPortHandler(portHandler) {
     this.portHandlers.push(portHandler);
 };
 
+WSDL.prototype.addTypeHandler = function addTypeHandler(typeHandler) {
+    this.typeHandlers.push(typeHandler);
+};
+
 WSDL.prototype.getMessage = function getMessage(name) {
     if (name.length === 1) {
         name.unshift("");
@@ -135,6 +146,16 @@ WSDL.prototype.getService = function getService(name) {
     }
  
     return this.services.filter(function(e) {
+        return e.name[0] === name[0] && e.name[1] === name[1];
+    }).shift();
+};
+
+WSDL.prototype.getType = function getType(name) {
+    if (name.length === 1) {
+        name.unshift("");
+    }
+    
+    return this.types.filter(function(e) {
         return e.name[0] === name[0] && e.name[1] === name[1];
     }).shift();
 };
@@ -218,6 +239,14 @@ WSDL.prototype._load_data = function (data, done) {
     self.state.targetNamespace.push(targetNamespace);
 
     var i;
+    
+    var types = definition.getElementsByTagNameNS(
+        "http://schemas.xmlsoap.org/wsdl",
+        "types"
+    );
+    for (i = 0; i < types.length; ++i) {
+        self.types.push(self.typeFromXML(types[i]));
+    });
 
     var messages = definition.getElementsByTagNameNS(
         "http://schemas.xmlsoap.org/wsdl/",
@@ -465,6 +494,11 @@ WSDL.prototype.portTypeFromXML = function portTypeFromXML(element) {
  
     return portType;
 };
+
+WSDL.prototype.typeFromXML = function typeFromXML(element) {
+    var type = {};
+    return type;
+});
 
 WSDL.prototype.messageFromXML = function messageFromXML(element) {
     var name = element.getAttribute("name");
