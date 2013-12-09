@@ -498,7 +498,7 @@ WSDL.prototype.portTypeFromXML = function portTypeFromXML(element) {
 WSDL.prototype.typeFromXML = function typeFromXML(element) {
     var type = {};
     return type;
-});
+};
 
 WSDL.prototype.messageFromXML = function messageFromXML(element) {
     var name = element.getAttribute("name");
