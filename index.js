@@ -246,7 +246,7 @@ WSDL.prototype._load_data = function (data, done) {
     );
     for (i = 0; i < types.length; ++i) {
         self.types.push(self.typeFromXML(types[i]));
-    });
+    };
 
     var messages = definition.getElementsByTagNameNS(
         "http://schemas.xmlsoap.org/wsdl/",
