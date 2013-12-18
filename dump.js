@@ -208,8 +208,25 @@ WSDL.load(options, process.argv[2], function(err, wsdl) {
                         // TODO: use = 'encoding' is not supported
                         return;
                     }
+
+                    // search message name in portTypes
+                    var msg_name;
+                    wsdl.portTypes[0].operations.forEach(function (portType) {
+                        if (portType.name != operation.name) return;
+                        if (!('input' in portType)) return;
+                        if (!('message' in portType.input)) return;
+                        msg_name = portType.input.message[1];
+                    });
+
+                    // search namespace for the message
+                    wsdl.messages.forEach(function (message) {
+                        if (message.name[1] != msg_name) return;
+                        if (!('parts' in message)) return;
+                        if (!('element' in message.parts[0])) return;
+                        request.push(message.parts[0].element);
+                    });
                 }
-               
+
                 result[operation.name] = {
                     uri: port.soap.address.location,
                     action: operation.soapOperation.soapAction,
@@ -220,5 +237,5 @@ WSDL.load(options, process.argv[2], function(err, wsdl) {
         });
     });
  
-    //console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2));
 });
